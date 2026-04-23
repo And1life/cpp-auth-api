@@ -4,7 +4,7 @@
 
 int main(int argc, char const *argv[])
 {
-    int port = 8080;
+    int port;
     if (const char* env_p = std::getenv("SERVER_PORT"))
     {
         port = std::stoi(env_p);
