@@ -43,6 +43,17 @@ ValidationResult Validator::validate_register(const User& user)
         return {false, "Password must contain upper, lower and digit"};
     }
     
+    std::set<std::string> allowed_roles = {
+        "individual",
+        "logistics_partner",
+        "business_account"
+    };
+
+    if (!allowed_roles.count(user.role))
+    {
+        return {false, "registration_forbidden"};
+    }
+    
     
     
 }
