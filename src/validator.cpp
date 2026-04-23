@@ -62,9 +62,17 @@ ValidationResult Validator::validate_register(const User& user)
         {
             return {false, "company_name required for business_account"};
         }
-        
     }
     
+    if (user.inn.has_value())
+    {
+        std::regex inn_regex(R"(^\d{10}|\d{12}$)");
+        if (!std::regex_match(*user.inn, inn_regex))
+        {
+            return {false, "Invalid INN"};
+        }
+    }
     
+    return {true, ""};
     
 }
