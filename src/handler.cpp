@@ -2,6 +2,7 @@
 #include <iostream>
 #include "json.hpp"
 #include "user.h"
+#include "validator.h"
 
 using json = nlohmann::json;
 
@@ -115,6 +116,33 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
     if (data.contains("metadata"))
     {
         user.metadata = data["metadata"].dump();
+    }
+    
+    auto result = Validator::validate_register(user);
+
+    if (!result.ok)
+    {
+        http::status status = http::status::bad_request;
+
+        if (result.message == "registration_forbidden")
+        {
+            status = http::status::forbidden;
+        }
+
+        http::response<http::string_body> res {status, req.version()};
+        res.set(http::field::content_type, "application/json");
+
+        json error = {
+            {"success", false},
+            {"error", result.message == "registration_forbidden"
+                            ? "registration_forbidden"
+                            : "validation_error"},
+            {"message", result.message}
+        };
+
+        res.body() = error.dump();
+        res.prepare_payload();
+        return res;
     }
     
     
