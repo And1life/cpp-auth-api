@@ -1,6 +1,7 @@
 #include "handler.h"
 #include <iostream>
 #include "json.hpp"
+#include "user.h"
 
 using json = nlohmann::json;
 
@@ -89,12 +90,37 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
     }
 
 
-    std::string username = data["username"];
-    std::string email = data["email"];
-    std::string phone = data["phone"];
-    std::string password = data["password"];
+    User user;
 
-    std::cout << "Parsed user: " << username << ", " << email << std::endl;
+    user.username = data["username"];
+    user.email = data["email"];
+    user.phone = data["phone"];
+    user.password = data["password"];
+
+    if (data.contains("role"))
+    {
+        user.role = data["role"];
+    }
+
+    if(data.contains("company_name"))
+    {
+        user.company_name = data["company_name"];
+    }
+
+    if (data.contains("inn"))
+    {
+        user.inn = data["inn"];
+    }
+    
+    if (data.contains("metadata"))
+    {
+        user.metadata = data["metadata"].dump();
+    }
+    
+    
+
+
+    std::cout << "Parsed user: " << user.username << ", " << user.email << std::endl;
     
     http::response<http::string_body> res {
         http::status::ok,
@@ -105,10 +131,11 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
 
     json response = {
         {"success", true},
-        {"message", "JSON parsed successfully"},
+        {"message", "User registered successfully."},
         {"user", {
-            {"username", username},
-            {"email", email}
+            {"username", user.username},
+            {"email", user.email},
+            {"role", user.role}
         }}
     };
 
