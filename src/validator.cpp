@@ -54,6 +54,17 @@ ValidationResult Validator::validate_register(const User& user)
         return {false, "registration_forbidden"};
     }
     
+    if (user.role == "business_account")
+    {
+        if (!user.company_name.has_value() ||
+            user.company_name->empty() ||
+            user.company_name->size() > 256)
+        {
+            return {false, "company_name required for business_account"};
+        }
+        
+    }
+    
     
     
 }
