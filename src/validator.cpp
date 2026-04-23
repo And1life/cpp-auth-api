@@ -10,4 +10,13 @@ ValidationResult Validator::validate_register(const User& user)
         return {false, "Invalid username length"};
     }
     
+    std::regex email_regex(R"(^[\w\.-]+@[\w\.-]+\.\w+$)");
+    if (user.email.empty() || user.email.size() > 255 ||
+        !std::regex_match(user.email, email_regex))
+    {
+        return {false, "Invalid email"};
+    }
+
+    
+    
 }
