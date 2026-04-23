@@ -48,15 +48,7 @@ void HttpServer::handle_session(tcp::socket socket)
         http::request<http::string_body> req;
         http::read(socket, buffer, req);
 
-        std::cout << "Incoming request: "
-                  << req.method_string() << " "
-                  << req.target() << std::endl;
-
-        http::response<http::string_body> res (http::status::ok, req.version());
-
-        res.set(http::field::content_type, "application/json");
-        res.body() = R"({"message": "Server is running"})";
-        res.prepare_payload();
+        http::response<http::string_body> res = handler_.handle(req);
 
         http::write(socket, res);
         socket.shutdown(tcp::socket::shutdown_send);

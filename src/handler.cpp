@@ -57,6 +57,5 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
     })";
 
     res.prepare_payload();
-    return res;
-    
+    return res; 
 }
