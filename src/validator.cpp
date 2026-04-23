@@ -17,6 +17,10 @@ ValidationResult Validator::validate_register(const User& user)
         return {false, "Invalid email"};
     }
 
+    if (user.phone.empty() || user.phone.size() > 32)
+    {
+        return{false, "Invalid phone"};
+    }
     
     
 }
