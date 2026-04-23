@@ -21,6 +21,28 @@ ValidationResult Validator::validate_register(const User& user)
     {
         return{false, "Invalid phone"};
     }
+
+    if (user.password.size() < 8 || user.password.size() > 20)
+    {
+        return {false, "Password length must be 8-20"};
+    }
+
+    bool has_upper = false;
+    bool has_lower = false;
+    bool has_digit = false;
+
+    for ( char c : user.password)
+    {
+        if (std::isupper(c)) has_upper = true;
+        if (std::islower(c)) has_lower = true;
+        if (std::isdigit(c)) has_digit = true;
+    }
+    
+    if (!has_upper || !has_lower || !has_digit)
+    {
+        return {false, "Password must contain upper, lower and digit"};
+    }
+    
     
     
 }
