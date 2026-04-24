@@ -4,6 +4,7 @@
 #include "user.h"
 #include "validator.h"
 #include "db.h"
+#include "crypto.h"
 
 using json = nlohmann::json;
 
@@ -218,7 +219,8 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
         return res;
     }
 
-    std::string password_hash = user.password;
+    std::string password_hash = PasswordHasher::hash(user.password);
+    user.password.clear();
 
     auto id = db_.insert_user(user, password_hash);
 

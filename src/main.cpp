@@ -1,9 +1,11 @@
 #include "http_server.h"
 #include <cstdlib>
 #include <iostream>
+#include "dotenv.h"
 
 int main(int argc, char const *argv[])
 {
+    dotenv::init();
     int port;
     if (const char* env_p = std::getenv("SERVER_PORT"))
     {
