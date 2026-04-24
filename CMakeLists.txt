@@ -5,6 +5,7 @@ set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 find_package(Boost REQUIRED COMPONENTS system thread)
+find_package(PostgreSQL REQUIRED)
 
 file(GLOB SOURCES src/*.cpp)
 
@@ -17,4 +18,5 @@ target_include_directories(auth_service
 target_link_libraries(auth_service
     Boost::system
     Boost::thread
+    PostgreSQL::PostgreSQL
 )
