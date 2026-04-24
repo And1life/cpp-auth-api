@@ -2,6 +2,7 @@
 
 #include <boost/asio.hpp>
 #include "handler.h"
+#include "db.h"
 
 class HttpServer {
 public:
@@ -16,6 +17,7 @@ private:
 private:
     int port_;
     boost::asio::io_context io_context_;
+    Database db_;
     Handler handler_;
         
 };

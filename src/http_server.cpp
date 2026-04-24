@@ -9,14 +9,21 @@ namespace http = beast::http;
 namespace net = boost::asio;
 using tcp = net::ip::tcp;
 
-HttpServer::HttpServer(int port) : port_(port), io_context_(1)
+HttpServer::HttpServer(int port) : port_(port), io_context_(1), db_(), handler_(db_)
 {
 }
 
 void HttpServer::run()
 {
+    if (!db_.connect()) {
+        std::cerr << "DB connection failed" << std::endl;
+        return;
+    }
+
+    std::cout << "DB connected" << std::endl;
+
     try
-    {
+    { 
         std::cout << "Server started on port " << port_ << std::endl;
         accept_loop();
     }

@@ -3,6 +3,7 @@
 #include <string>
 #include <optional>
 #include "user.h"
+#include <libpq-fe.h>
 
 class Database {
 public:
@@ -16,5 +17,5 @@ public:
 
 private:
     std::string conninfo_;
-    void* conn_;
+    PGconn* conn_;
 };

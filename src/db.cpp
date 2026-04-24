@@ -32,9 +32,9 @@ bool Database::connect()
 
     conn_ = PQconnectdb(conninfo_.c_str());
 
-    if (PQstatus((PGconn*)conn_) != CONNECTION_OK)
+    if (PQstatus(conn_) != CONNECTION_OK)
     {
-        std::cerr << "DB error: " << PQerrorMessage((PGconn*)conn_) << std::endl;
+        std::cerr << "DB error: " << PQerrorMessage(conn_) << std::endl;
         return false;
     }
 
@@ -63,11 +63,19 @@ std::optional<User> Database::find_user(const std::string &email, const std::str
         PQclear(res);
         return std::nullopt;
     }
+
+    int rows = PQntuples(res);
+
+    if (rows == 0) {
+        PQclear(res);
+        return std::nullopt;
+    }
     
     User user;
-    user.username = PQgetvalue(res, 0, 0);
-    user.email = PQgetvalue(res, 0, 1);
-    user.role = PQgetvalue(res, 0, 2);
+    user.id       = PQgetvalue(res, 0, 0);
+    user.username = PQgetvalue(res, 0, 1);
+    user.email    = PQgetvalue(res, 0, 2);
+    user.role     = PQgetvalue(res, 0, 3);
 
     PQclear(res);
     return user;
@@ -87,7 +95,7 @@ std::optional<std::string> Database::insert_user(const User &user, const std::st
     };
 
     PGresult* res = PQexecParams(
-        (PGconn*)conn_,
+        conn_,
         "INSERT INTO users "
         "(username,email,phone,password_hash,role,company_name,inn,metadata) "
         "VALUES ($1,$2,$3,$4,$5,$6,$7,$8) "
@@ -100,7 +108,8 @@ std::optional<std::string> Database::insert_user(const User &user, const std::st
         0
     );
 
-    if (PQresultStatus(res) != PGRES_TUPLES_OK) {
+    if (PQresultStatus(res) != PGRES_TUPLES_OK &&
+        PQresultStatus(res) != PGRES_COMMAND_OK) {
         std::cerr << "Insert error: " << PQerrorMessage((PGconn*)conn_) << std::endl;
         PQclear(res);
         return std::nullopt;

@@ -3,8 +3,14 @@
 #include "json.hpp"
 #include "user.h"
 #include "validator.h"
+#include "db.h"
 
 using json = nlohmann::json;
+
+Handler::Handler(Database& db) : db_(db)
+{
+
+}
 
 http::response<http::string_body> Handler::handle(const http::request<http::string_body> &req)
 {
@@ -146,9 +152,89 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
     }
     
     
+    auto existing = db_.find_user(user.email, user.username);
 
+    if (existing)
+    {
+        if (existing->email == user.email &&
+            existing->username == user.username)
+        {
+            json response = {
+                {"success", true},
+                {"message", "User already exists (idempotent)"},
+                {"user", {
+                    {"id", existing->id},
+                    {"username", existing->username},
+                    {"email", existing->email},
+                    {"role", existing->role}
+                }}
+            };
+
+            http::response<http::string_body> res {
+                http::status::ok,
+                req.version()
+            };
+
+            res.set(http::field::content_type, "application/json");
+            res.body() = response.dump();
+            res.prepare_payload();
+            return res;
+        }
+
+        json err = {
+            {"success", false},
+            {"error", "registration_failed"},
+            {"message", "User already exists"}
+        };
+        
+        http::response<http::string_body> res {
+            http::status::bad_request,
+            req.version()
+        };
+
+        res.set(http::field::content_type, "application/json");
+        res.body() = err.dump();
+        res.prepare_payload();
+        return res;
+    }
+
+    std::string password_hash = user.password;
+
+    auto id = db_.insert_user(user, password_hash);
+
+    if (!id)
+    {
+        json err = {
+            {"success", false},
+            {"error", "internal_error"},
+            {"message", "Database insert failed"}
+        };
+
+        http::response<http::string_body> res {
+            http::status::internal_server_error,
+            req.version()
+        };
+
+        res.set(http::field::content_type, "application/json");
+        res.body() = err.dump();
+        res.prepare_payload();
+        return res;
+    }
+    
+    
 
     std::cout << "Parsed user: " << user.username << ", " << user.email << std::endl;
+
+    json response = {
+        {"success", true},
+        {"message", "User registered successfully."},
+        {"user", {
+            {"id", *id},
+            {"username", user.username},
+            {"email", user.email},
+            {"role", user.role}
+        }}
+    };
     
     http::response<http::string_body> res {
         http::status::ok,
@@ -156,17 +242,6 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
     };
 
     res.set(http::field::content_type, "application/json");
-
-    json response = {
-        {"success", true},
-        {"message", "User registered successfully."},
-        {"user", {
-            {"username", user.username},
-            {"email", user.email},
-            {"role", user.role}
-        }}
-    };
-
     res.body() = response.dump();
     res.prepare_payload();
 
