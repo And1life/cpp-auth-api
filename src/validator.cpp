@@ -72,6 +72,12 @@ ValidationResult Validator::validate_register(const User& user)
             return {false, "Invalid INN"};
         }
     }
+
+    if (user.metadata.has_value() && user.metadata->size() > 4096)
+    {
+        return {false, "metadata too large"};
+    }
+    
     
     return {true, ""};
     

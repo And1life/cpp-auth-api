@@ -121,6 +121,26 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
     
     if (data.contains("metadata"))
     {
+        if (!data["metadata"].is_object())
+        {
+            json err = {
+            {"success", false},
+            {"error", "validation_error"},
+            {"message", "metadata must be object"}
+        };
+        
+        http::response<http::string_body> res {
+            http::status::bad_request,
+            req.version()
+        };
+
+        res.set(http::field::content_type, "application/json");
+        res.body() = err.dump();
+        res.prepare_payload();
+        
+        return res;
+        }
+        
         user.metadata = data["metadata"].dump();
     }
     
@@ -136,16 +156,16 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
         }
 
         http::response<http::string_body> res {status, req.version()};
-        res.set(http::field::content_type, "application/json");
-
+        
         json error = {
             {"success", false},
             {"error", result.message == "registration_forbidden"
-                            ? "registration_forbidden"
-                            : "validation_error"},
-            {"message", result.message}
-        };
-
+                ? "registration_forbidden"
+                : "validation_error"},
+                {"message", result.message}
+            };
+            
+        res.set(http::field::content_type, "application/json");
         res.body() = error.dump();
         res.prepare_payload();
         return res;
