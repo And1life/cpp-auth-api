@@ -3,6 +3,7 @@
 #include <iostream>
 #include <thread>
 #include "http_server.h"
+#include <spdlog/spdlog.h>
 
 namespace beast = boost::beast;
 namespace http = beast::http;
@@ -16,20 +17,18 @@ HttpServer::HttpServer(int port) : port_(port), io_context_(1), db_(), handler_(
 void HttpServer::run()
 {
     if (!db_.connect()) {
-        std::cerr << "DB connection failed" << std::endl;
+        spdlog::critical("DB connection failed. Server will not start");
         return;
     }
 
-    std::cout << "DB connected" << std::endl;
-
     try
     { 
-        std::cout << "Server started on port " << port_ << std::endl;
+        spdlog::info("Server started on port {}", port_);
         accept_loop();
     }
     catch(const std::exception& e)
     {
-        std::cerr << "Server error: " << e.what() << '\n';
+        spdlog::critical("Server error: {}", e.what());
     }
 }
 
@@ -50,18 +49,25 @@ void HttpServer::handle_session(tcp::socket socket)
 {
     try
     {
+        spdlog::debug("Handling new session");
+
         beast::flat_buffer buffer;
 
         http::request<http::string_body> req;
         http::read(socket, buffer, req);
 
+        spdlog::debug("Request received");
+
         http::response<http::string_body> res = handler_.handle(req);
 
         http::write(socket, res);
+
+        spdlog::debug("Response sent");
+
         socket.shutdown(tcp::socket::shutdown_send);
     }
     catch(const std::exception& e)
     {
-        std::cerr << "Session error: " << e.what() << '\n';
+        spdlog::error("Session error: {}", e.what());
     }
 }

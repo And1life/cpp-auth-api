@@ -2,6 +2,7 @@
 #include <libpq-fe.h>
 #include <iostream>
 #include <cstdlib>
+#include <spdlog/spdlog.h>
 
 Database::Database() : conn_(nullptr)
 {
@@ -17,6 +18,8 @@ Database::~Database()
 
 bool Database::connect()
 {
+    spdlog::info("Connecting to DB...");
+
     const char* host = std::getenv("DB_HOST");
     const char* port = std::getenv("DB_PORT");
     const char* db = std::getenv("DB_NAME");
@@ -34,16 +37,18 @@ bool Database::connect()
 
     if (PQstatus(conn_) != CONNECTION_OK)
     {
-        std::cerr << "DB error: " << PQerrorMessage(conn_) << std::endl;
+        spdlog::error("DB connection failed: {}", PQerrorMessage(conn_));
         return false;
     }
 
-    std::cout << "Connected to DB" << std::endl;
+    spdlog::info("Database connected successfully");
     return true;
 }
 
 std::optional<User> Database::find_user(const std::string &email, const std::string &username)
 {
+    spdlog::debug("Searching user: email={}, username={}", email, username);
+
     const char* params[2] = { email.c_str(), username.c_str() };
 
     PGresult* res = PQexecParams(
@@ -59,7 +64,7 @@ std::optional<User> Database::find_user(const std::string &email, const std::str
 
     if (PQresultStatus(res) != PGRES_TUPLES_OK)
     {
-        std::cerr << "SELECT failed" << std::endl;
+        spdlog::error("SELECT failed: {}", PQerrorMessage(conn_));
         PQclear(res);
         return std::nullopt;
     }
@@ -83,6 +88,8 @@ std::optional<User> Database::find_user(const std::string &email, const std::str
 
 std::optional<std::string> Database::insert_user(const User &user, const std::string &password_hash)
 {
+    spdlog::debug("Inserting user: {}", user.email);
+
     const char* params[8] = {
         user.username.c_str(),
         user.email.c_str(),
@@ -110,7 +117,7 @@ std::optional<std::string> Database::insert_user(const User &user, const std::st
 
     if (PQresultStatus(res) != PGRES_TUPLES_OK &&
         PQresultStatus(res) != PGRES_COMMAND_OK) {
-        std::cerr << "Insert error: " << PQerrorMessage((PGconn*)conn_) << std::endl;
+        spdlog::error("Insert failed: {}", PQerrorMessage(conn_));
         PQclear(res);
         return std::nullopt;
     }

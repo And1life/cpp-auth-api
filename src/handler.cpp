@@ -5,6 +5,7 @@
 #include "validator.h"
 #include "db.h"
 #include "crypto.h"
+#include <spdlog/spdlog.h>
 
 using json = nlohmann::json;
 
@@ -15,12 +16,13 @@ Handler::Handler(Database& db) : db_(db)
 
 http::response<http::string_body> Handler::handle(const http::request<http::string_body> &req)
 {
-    std::cout << "Request: "
-              << req.method_string() << " "
-              << req.target() << std::endl;
+    spdlog::info("Incoming request: method={}, target={}",
+             std::string(req.method_string()),
+             std::string(req.target()));
 
     if (req.target() == "/auth/register")
     {
+        spdlog::debug("Routing to /auth/register");
         return handle_register(req);
     }
 
@@ -40,6 +42,9 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
 {
     if (req.method() != http::verb::post)
     {
+        spdlog::warn("Invalid method for /auth/register: {}",
+             std::string(req.method_string()));
+
         http::response<http::string_body> res{
             http::status::method_not_allowed,
             req.version()
@@ -54,12 +59,16 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
 
     json data;
 
+    spdlog::debug("Parsing JSON body");
+
     try
     {
         data = json::parse(req.body());
     }
     catch(...)
     {
+        spdlog::warn("Invalid JSON received");
+
         http::response<http::string_body> res {
             http::status::bad_request,
             req.version()
@@ -75,6 +84,8 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
         res.prepare_payload();
         return res;
     }
+
+    spdlog::debug("Checking required fields");
 
     if (!data.contains("username") ||
         !data.contains("email") ||
@@ -93,6 +104,7 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
             "message": "Missing required fields"
         })";
 
+        spdlog::warn("Missing required fields");
         res.prepare_payload();
         return res;
     }
@@ -124,6 +136,8 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
     {
         if (!data["metadata"].is_object())
         {
+            spdlog::warn("Invalid metadata format (not object)");
+
             json err = {
             {"success", false},
             {"error", "validation_error"},
@@ -145,10 +159,14 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
         user.metadata = data["metadata"].dump();
     }
     
+    spdlog::debug("Validating user data");
+
     auto result = Validator::validate_register(user);
 
     if (!result.ok)
     {
+        spdlog::warn("Validation failed: {}", result.message);
+
         http::status status = http::status::bad_request;
 
         if (result.message == "registration_forbidden")
@@ -172,7 +190,9 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
         return res;
     }
     
-    
+    spdlog::debug("Checking if user exists: email={}, username={}",
+             user.email, user.username);
+
     auto existing = db_.find_user(user.email, user.username);
 
     if (existing)
@@ -180,6 +200,8 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
         if (existing->email == user.email &&
             existing->username == user.username)
         {
+            spdlog::info("User already exists (idempotent): {}", user.email);
+
             json response = {
                 {"success", true},
                 {"message", "User already exists (idempotent)"},
@@ -202,6 +224,8 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
             return res;
         }
 
+        spdlog::warn("User already exists: {}", user.email);
+
         json err = {
             {"success", false},
             {"error", "registration_failed"},
@@ -219,13 +243,19 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
         return res;
     }
 
+    spdlog::debug("Hashing password");
+
     std::string password_hash = PasswordHasher::hash(user.password);
     user.password.clear();
+
+    spdlog::debug("Inserting user into DB: {}", user.email);
 
     auto id = db_.insert_user(user, password_hash);
 
     if (!id)
     {
+        spdlog::error("Database insert failed for {}", user.email);
+
         json err = {
             {"success", false},
             {"error", "internal_error"},
@@ -243,9 +273,8 @@ http::response<http::string_body> Handler::handle_register(const http::request<h
         return res;
     }
     
-    
 
-    std::cout << "Parsed user: " << user.username << ", " << user.email << std::endl;
+    spdlog::info("User registered successfully: id={}, email={}", *id, user.email);
 
     json response = {
         {"success", true},
