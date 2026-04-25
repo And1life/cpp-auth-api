@@ -14,6 +14,9 @@ find_package(PostgreSQL REQUIRED)
 #argon2
 find_library(ARGON2_LIB argon2 REQUIRED)
 
+#spdlog
+find_package(spdlog REQUIRED)    
+
 # sources
 file(GLOB SOURCES src/*.cpp)
 
@@ -29,5 +32,6 @@ target_link_libraries(auth_service
     Boost::system
     Boost::thread
     PostgreSQL::PostgreSQL
+    spdlog::spdlog
     ${ARGON2_LIB}
 )
